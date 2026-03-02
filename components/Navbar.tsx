@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import {
   SignInButton,
   SignUpButton,
@@ -20,6 +21,12 @@ const navItems = [
 const Navbar = () => {
   const pathname = usePathname();
   const { user } = useUser() || {};
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   return (
     <header className="w-full fixed z-50 bg-(--bg-primary)">
       <div className="wrapper navbar-height py-4 flex items-center justify-between">
@@ -43,7 +50,7 @@ const Navbar = () => {
             <SignedIn>
               <div className='nav-user-link'>
                 <UserButton />
-                {user?.firstName && (
+                {isMounted && user?.firstName && (
                   <Link href="/subscriptions" className="nav-user-name">
                     {user.firstName}
                   </Link>
