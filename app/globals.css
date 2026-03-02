@@ -99,7 +99,7 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: rgba(33, 42, 59, 0.12);
   --input: rgba(33, 42, 59, 0.12);
-  --ring: #212a3b;
+  --ring: #8B7355;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -206,7 +206,7 @@
     @apply max-w-7xl px-5 mx-auto w-full space-y-6 py-18 min-h-screen;
   }
   .new-book-wrapper {
-    @apply mx-auto max-w-2xl space-y-6 mt-12 mb-20;
+    @apply mx-auto max-w-3xl space-y-6 mt-12 mb-20;
   }
   .file-upload-shadow {
     @apply relative z-20 flex flex-col justify-center items-center p-7;
@@ -216,7 +216,7 @@
     font-family: 'IBM Plex Serif', serif;
   }
   .loading-wrapper {
-    @apply fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm;
+    @apply fixed h-full m-0! inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm;
   }
   .loading-shadow-wrapper {
     @apply rounded-xl p-10 w-fit md:min-w-md;
@@ -617,7 +617,7 @@
     @apply flex gap-4;
   }
   .voice-selector-option {
-    @apply flex-1 flex items-center justify-center gap-3 p-4 border border-(--border-subtle) rounded-lg cursor-pointer transition-all;
+    @apply flex-1 flex items-start justify-start gap-3 p-4 border border-(--border-subtle) rounded-lg cursor-pointer transition-all;
     box-shadow: var(--shadow-soft-sm);
 
     &:hover {
@@ -716,7 +716,7 @@
     @apply text-lg font-medium text-black mb-2 block;
   }
   .form-input {
-    @apply w-full p-4 bg-white rounded-lg text-lg font-medium text-[#222] placeholder:text-[#999];
+    @apply w-full p-4 h-12! bg-white rounded-lg text-lg font-medium text-[#222] placeholder:text-[#999] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50;
   }
 
   /* ===========================================
