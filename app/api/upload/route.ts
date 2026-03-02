@@ -5,9 +5,16 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request): Promise<NextResponse> {
   const body = (await request.json()) as HandleUploadBody;
+  const readWriteToken = process.env.bookified_READ_WRITE_TOKEN;
+  if (!readWriteToken) {
+    return NextResponse.json(
+      { success: false, error: "Upload token is not configured" },
+      { status: 500 }
+    );
+  }
   try {
     const jsonResponse = await handleUpload({
-      token: process.env.bookified_READ_WRITE_TOKEN || "",
+      token: readWriteToken,
       body,
       request,
       onBeforeGenerateToken: async () => {
