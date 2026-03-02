@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Upload, ImageIcon } from 'lucide-react';
@@ -15,10 +15,16 @@ import { useRouter } from "next/navigation";
 import LoadingOverlay from './LoadingOverlay';
 import FileUploader from './FileUploader';
 import VoiceSelector from './VoiceSelector';
+import { toast } from 'sonner';
+import { checksBookExists, createBook, saveBookSegment } from '@/lib/actions/book.action';
+import { parsePDFFile } from '@/lib/utils';
+import { upload } from '@vercel/blob/client';
 
 const UploadForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const { userId } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     setIsMounted(true);
@@ -36,10 +42,90 @@ const UploadForm = () => {
   });
 
   const onSubmit = async (data: BookUploadFormValues) => {
+    if (!userId) {
+      return toast.error("You must be logged in to upload a book.");
+    }
+
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 2500));
-    console.log("Form data:", data);
-    setIsSubmitting(false);
+    try {
+      const existCheck = await checksBookExists(data.title);
+      if (existCheck.exist && existCheck.data) {
+        toast.error("A book with the same title already exists. Please choose a different title.");
+        form.reset();
+        router.push(`/book/${existCheck.data.slug}`);
+        return;
+      }
+
+      const fileTitle = data.title.replace(/\.[^/.]+$/, ""); // Remove file extension if present
+      const pdfFile = data.pdfFile;
+
+      const parsePdf = await parsePDFFile(pdfFile);
+      if (parsePdf.content.length === 0) {
+        toast.error("Failed to parse PDF file. Please ensure the file is a valid PDF.");
+        return;
+      }
+
+      const uploadedPdfBlob = await upload(fileTitle, pdfFile, {
+        access: 'public',
+        handleUploadUrl: '/api/upload',
+        contentType: 'application/pdf',
+      });
+
+      let coverImageUrl: string;
+      if (data.coverImage) {
+        const coverFile = data.coverImage;
+        const uploadedCoverBlob = await upload(`${fileTitle}-cover`, coverFile, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+          contentType: coverFile.type,
+        });
+        coverImageUrl = uploadedCoverBlob.url;
+      } else {
+        const response = await fetch(parsePdf.cover)
+        const blob = await response.blob();
+        const autoUploadCoverBlob = await upload(`${fileTitle}-cover`, blob, {
+          access: 'public',
+          handleUploadUrl: '/api/upload',
+          contentType: blob.type,
+        });
+        coverImageUrl = autoUploadCoverBlob.url;
+      }
+
+      const book = await createBook({
+        clerkId: userId,
+        title: data.title,
+        author: data.author,
+        persona: data.persona,
+        fileURL: uploadedPdfBlob.url,
+        fileBlobKey: uploadedPdfBlob.pathname,
+        coverURL: coverImageUrl,
+        fileSize: pdfFile.size,
+      });
+      if (!book.success || !book.data) {
+        toast.error("Failed to create book record.");
+        return;
+      }
+      if (book.alreadyExists) {
+        toast.info("A book with the same title already exists. Please choose a different title.");
+        form.reset();
+        router.push(`/book/${book.data.slug}`);
+        return;
+      }
+
+      const segments = await saveBookSegment(book.data._id, userId, parsePdf.content);
+      if (!segments.success) {
+        toast.error("Failed to save book segments.");
+        return;
+      }
+
+      toast.success("Book uploaded and processed successfully!");
+      form.reset();
+      router.push(`/`);
+    } catch (error: any) {
+      toast.error("Failed to upload book.", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isMounted) return null;
