@@ -41,14 +41,35 @@ const UploadForm = () => {
     },
   });
 
+  const deleteBlobs = async (urls: string[]) => {
+    if (urls.length === 0) return;
+    
+    try {
+      const response = await fetch('/api/blob/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls }),
+      });
+      
+      const result = await response.json();
+      if (!result.success) {
+        console.error('Failed to delete some blobs:', result.failed);
+      }
+    } catch (error) {
+      console.error('Error deleting blobs:', error);
+    }
+  };
+
   const onSubmit = async (data: BookUploadFormValues) => {
     if (!userId) {
       return toast.error("You must be logged in to upload a book.");
     }
 
     setIsSubmitting(true);
+    const uploadedBlobUrls: string[] = [];
+    
     try {
-      const existCheck = await checksBookExists(data.title);
+      const existCheck: any = await checksBookExists(data.title);
       if (existCheck.exist && existCheck.data) {
         toast.error("A book with the same title already exists. Please choose a different title.");
         form.reset();
@@ -70,6 +91,7 @@ const UploadForm = () => {
         handleUploadUrl: '/api/upload',
         contentType: 'application/pdf',
       });
+      uploadedBlobUrls.push(uploadedPdfBlob.url);
 
       let coverImageUrl: string;
       if (data.coverImage) {
@@ -80,6 +102,7 @@ const UploadForm = () => {
           contentType: coverFile.type,
         });
         coverImageUrl = uploadedCoverBlob.url;
+        uploadedBlobUrls.push(uploadedCoverBlob.url);
       } else {
         const response = await fetch(parsePdf.cover)
         const blob = await response.blob();
@@ -89,6 +112,7 @@ const UploadForm = () => {
           contentType: blob.type,
         });
         coverImageUrl = autoUploadCoverBlob.url;
+        uploadedBlobUrls.push(autoUploadCoverBlob.url);
       }
 
       const book = await createBook({
@@ -101,11 +125,15 @@ const UploadForm = () => {
         coverURL: coverImageUrl,
         fileSize: pdfFile.size,
       });
+      
       if (!book.success || !book.data) {
+        await deleteBlobs(uploadedBlobUrls);
         toast.error("Failed to create book record.");
         return;
       }
+      
       if (book.alreadyExists) {
+        await deleteBlobs(uploadedBlobUrls);
         toast.info("A book with the same title already exists. Please choose a different title.");
         form.reset();
         router.push(`/book/${book.data.slug}`);
@@ -114,6 +142,7 @@ const UploadForm = () => {
 
       const segments = await saveBookSegment(book.data._id, userId, parsePdf.content);
       if (!segments.success) {
+        await deleteBlobs(uploadedBlobUrls);
         toast.error("Failed to save book segments.");
         return;
       }
@@ -122,7 +151,12 @@ const UploadForm = () => {
       form.reset();
       router.push(`/`);
     } catch (error: any) {
-      toast.error("Failed to upload book.", error);
+      if (uploadedBlobUrls.length > 0) {
+        await deleteBlobs(uploadedBlobUrls);
+        toast.error("Failed to upload book. Uploaded files have been cleaned up.");
+      } else {
+        toast.error("Failed to upload book.");
+      }
     } finally {
       setIsSubmitting(false);
     }

@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
       new URL("https://covers.openlibrary.org/**"),
       new URL("https://owd74cfcecx6dz6j.public.blob.vercel-storage.com/**"),
     ],
-    dangerouslyAllowLocalIP: true,
+    dangerouslyAllowLocalIP: process.env.NODE_ENV !== "production",
   },
 };
 

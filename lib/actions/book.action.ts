@@ -1,7 +1,7 @@
 'use server';
 
 import { dbConnect } from "@/database/mongoose";
-import { BookCardProps, CreateBook, TextSegment } from "@/types";
+import { CreateBook, TextSegment } from "@/types";
 import { generateSlug, serializeData } from "../utils";
 import Book from "@/database/models/book.model";
 import BookSegment from "@/database/models/book-segment.model";
@@ -12,12 +12,12 @@ export const checksBookExists = async (title: string) => {
     const slug = generateSlug(title);
     const existingBook = await Book.findOne({ slug }).lean();
     if (existingBook) {
-      return { exist: true, data: serializeData(existingBook) };
+      return { success: true, exist: true, data: serializeData(existingBook) };
     }
-    return { exist: false };
+    return { success: true, exist: false };
   } catch (error) {
     console.error("Error checking book existence:", error);
-    return { success: false, error: "Failed to check book existence" };
+    return { success: false, exist: false, error: "Failed to check book existence" };
   }
 };
 
