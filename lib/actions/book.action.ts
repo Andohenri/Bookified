@@ -6,6 +6,8 @@ import { escapeRegex, generateSlug, serializeData } from "../utils";
 import Book from "@/database/models/book.model";
 import BookSegment from "@/database/models/book-segment.model";
 import { Types } from "mongoose";
+import { revalidatePath } from "next/cache";
+import { getUserPlanLimits } from "../server-plan";
 
 export const checksBookExists = async (title: string) => {
   try {
@@ -31,9 +33,19 @@ export const createBook = async (bookData: CreateBook) => {
       return { success: true, data: serializeData(existingBook), alreadyExists: true };
     }
 
-    // TODO: Check subscription limits here before creating the book
+    // Check subscription limits before creating the book
+    const { plan, limits } = await getUserPlanLimits();
+    console.log(`User plan: ${plan}, Book count limit: ${limits.maxBooks}`);
+    const bookCount = await Book.countDocuments({ clerkId: bookData.clerkId });
+    if (bookCount >= limits.maxBooks) {
+      return {
+        success: false,
+        error: `You've reached the ${plan} plan limit of ${limits.maxBooks} book${limits.maxBooks === 1 ? '' : 's'}. Upgrade your plan to add more.`,
+      };
+    }
 
     const newBook = await Book.create({ ...bookData, slug, totalSegments: 0 });
+    revalidatePath('/');
     return { success: true, data: serializeData(newBook), alreadyExists: false };
   } catch (error) {
     console.error("Error creating book:", error);
@@ -59,6 +71,7 @@ export const saveBookSegment = async (bookId: string, clerkId: string, segments:
     console.error("Error saving book segment:", error);
     await BookSegment.deleteMany({ bookId });
     await Book.findByIdAndDelete(bookId);
+    revalidatePath('/');
     return { success: false, error: "Deleted book due to error saving segment" };
   }
 };
@@ -75,10 +88,20 @@ export const getBookBySlug = async (slug: string) => {
   }
 };
 
-export const getAllBooks = async () => {
+export const getAllBooks = async (query?: string) => {
   try {
     await dbConnect();
-    const books = await Book.find().sort({ createdAt: -1 }).lean();
+    const filter: Record<string, unknown> = {};
+
+    if (query && query.trim().length > 0) {
+      const pattern = escapeRegex(query.trim());
+      filter.$or = [
+        { title: { $regex: pattern, $options: 'i' } },
+        { author: { $regex: pattern, $options: 'i' } },
+      ];
+    }
+
+    const books = await Book.find(filter).sort({ createdAt: -1 }).lean();
     return { success: true, data: books.map(serializeData) };
   } catch (error) {
     console.error("Error fetching books:", error);
@@ -115,6 +138,13 @@ export const searchBookSegments = async (bookId: string, query: string, limit: n
     if (segments.length === 0) {
       const keywords = query.split(/\s+/).filter((k) => k.length > 2);
       const pattern = keywords.map(escapeRegex).join('|');
+
+      if (keywords.length === 0) {
+        return {
+          success: true,
+          data: [],
+        };
+      }
 
       segments = await BookSegment.find({
         bookId: bookObjectId,

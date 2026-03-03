@@ -118,6 +118,12 @@ export interface FileUploadFieldProps<T extends FieldValues> {
     hint: string;
 }
 
+// ============================================
+// SUBSCRIPTION / BILLING TYPES
+// ============================================
+
+export type PlanType = 'free' | 'standard' | 'pro';
+
 export interface SessionCheckResult {
     allowed: boolean;
     currentCount: number;

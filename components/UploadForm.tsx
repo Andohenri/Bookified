@@ -128,7 +128,10 @@ const UploadForm = () => {
       
       if (!book.success || !book.data) {
         await deleteBlobs(uploadedBlobUrls);
-        toast.error("Failed to create book record.");
+        toast.error(book.error || "Failed to create book record.");
+        if (book.error?.includes("plan limit")) {
+          router.push("/subscriptions");
+        }
         return;
       }
       

@@ -16,6 +16,7 @@ import {
 const navItems = [
   { name: 'Library', href: '/' },
   { name: 'Add new', href: '/book/new' },
+  { name: 'Pricing', href: '/subscriptions' },
 ]
 
 const Navbar = () => {
@@ -34,7 +35,7 @@ const Navbar = () => {
           <Image className='w-auto h-auto' src="/assets/logo.png" alt="Bookified Logo" width={46} height={26} />
           <span className="logo-text">Bookified</span>
         </Link>
-        <nav className="w-fit flex items-center gap-7.5">
+        <nav className="w-fit flex items-center gap-3 md:gap-7.5">
           {navItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
             return (
@@ -51,9 +52,9 @@ const Navbar = () => {
               <div className='nav-user-link'>
                 <UserButton />
                 {isMounted && user?.firstName && (
-                  <Link href="/subscriptions" className="nav-user-name">
+                  <span className="nav-user-name cursor-pointer" onClick={() => document.querySelector<HTMLButtonElement>('.cl-userButtonTrigger')?.click()}>
                     {user.firstName}
-                  </Link>
+                  </span>
                 )}
               </div>
             </SignedIn>

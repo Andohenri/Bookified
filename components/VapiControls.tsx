@@ -13,12 +13,19 @@ const VapiControls = ({ book }: { book: IBook }) => {
     currentMessage,
     currentUserMessage,
     duration,
+    maxDurationSeconds,
     limitError,
     isActive,
     start,
     stop,
     clearErrors
   } = useVapi(book);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
   return (
     <>
       <section className="vapi-header-card w-full">
@@ -59,11 +66,19 @@ const VapiControls = ({ book }: { book: IBook }) => {
             </span>
 
             <span className="vapi-status-indicator">
-              <span className="vapi-status-text">0:00/15:00</span>
+              <span className="vapi-status-text">{formatTime(duration)}/{formatTime(maxDurationSeconds)}</span>
             </span>
           </div>
         </div>
       </section>
+
+      {limitError && (
+        <div className="error-banner">
+          <div className="error-banner-content">
+            <p className="text-sm text-red-700 font-medium">{limitError}</p>
+          </div>
+        </div>
+      )}
 
       <section className="vapi-transcript-wrapper">
         <Transcript
