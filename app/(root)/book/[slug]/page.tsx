@@ -23,7 +23,7 @@ const BookPage = async ({ params }: { params: Promise<{ slug: string }> }) => {
       </Link>
 
       <div className="vapi-main-container space-y-6">
-        <VapiControls book={result.data} />
+        <VapiControls book={result.data as any} />
       </div>
     </main>
   );
